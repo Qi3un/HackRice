@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 
+	namespace：必须与对应的接口全类名一致
+	id:必须与对应接口的某个对应的方法名一致
+	
+ -->
+<mapper namespace="edu.rice.mapper.UserMapper">
+	
+	 <select id="login" resultType="User">
+	 	select email, password from user where email=#{email} and password=#{password};
+	 </select>
+	 
+	 <insert id="addCourse">
+	 	insert into users_courses values(#{email}, #{crn}, #{termCode});
+	 </insert>
+
+
+	<insert id="enroll">
+		insert into user(email, password) values(#{email}, #{password});
+	</insert>
+
+	<delete id="dropCourse">
+		delete from users_courses where email = #{email} and crn = #{crn} and termCode = #{termCode}; 
+	</delete>
+
+	<select id="allCourses" resultType="Course">
+		select * from courses join users_courses on courses.crn = users_courses.crn and users_courses.termCode = courses.termCode where users_courses.email = #{email};
+	</select>
+	
+	
+	<select id="getCourses" resultType="Course">
+		select * from courses  where termCode = #{termCode}<if test="subj != null">
+    								     						and subject = #{subj}
+  									                       </if> 
+	</select>
+</mapper>
+
+

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_calendar"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="Calendar" />
+        <item
+            android:id="@+id/nav_user_course_list"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="Your Courses" />
+        <item
+            android:id="@+id/nav_all_todo_list"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="All Todos" />
+        <item
+            android:id="@+id/nav_todo_by_priority"
+            android:icon="@drawable/ic_menu_slideshow"
+            android:title="Todos by Priority" />
+        <item
+            android:id="@+id/nav_todo_by_category"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="Todo by Category" />
+    </group>
+
+    <item android:title="Add">
+        <menu>
+            <item
+                android:id="@+id/nav_add_course"
+                android:icon="@drawable/ic_menu_share"
+                android:title="Add Course" />
+            <item
+                android:id="@+id/nav_add_todo"
+                android:icon="@drawable/ic_menu_send"
+                android:title="Add Todo" />
+        </menu>
+    </item>
+
+</menu>

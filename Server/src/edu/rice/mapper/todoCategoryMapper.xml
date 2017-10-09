@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="edu.rice.mapper.TodoCategoryMapper">
+	<select id="getTodoCategory" resultType="TodoCategory">
+		select * from todocategories where category = #{category};
+	</select>
+
+	<select id="allTodoCategories" resultType="TodoCategory">
+		select * from todocategories;
+	</select>
+
+	<insert id="addTodoCategory">
+		insert into todocategories values(#{category}, #{color}, #{priority}, #{notifyMethod});
+	</insert>
+	
+	<update id="updateTodoCategory">
+		update todocategories set color = #{color}, priority = #{priority}, notifyMethod = #{notifyMethod} where category = #{category};
+	</update>
+
+	<delete id="deleteTodoCategory">
+		delete from todocategories where category = #{category};
+	</delete>
+</mapper>

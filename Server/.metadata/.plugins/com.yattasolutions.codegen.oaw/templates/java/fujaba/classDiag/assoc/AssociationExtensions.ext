@@ -1,0 +1,116 @@
+import uml;
+
+extension Utility reexport;
+extension java::standard::classDiag::property::AttributeExtensions;
+extension java::standard::classDiag::assoc::AssociationExtensions reexport;
+
+String getUpperString(Property this) :
+	if upper == -1 then
+		(if getBooleanAlias(true) then "n" else "*")
+	else
+		upper;
+
+//TODO use stereotype to find internal qualified property
+isInternalQualified(Property this) :
+	isQualified() && getQualifier().hasKeyword("internal");
+
+hasKey(Property this) :
+	isQualified() && !isInternalQualified();
+
+getKey(Property this) :
+		getQualifier().type.typeString(this);
+
+getKeyWrapper(Property this) :
+		getQualifier().type.name;
+
+isAggregation(Property this) :
+	aggregation == AggregationKind::shared;
+
+isComposition(Property this) :
+	aggregation == AggregationKind::composite;
+
+isParent(Property this) :
+	getOtherEnd().isAggregation() || getOtherEnd().isComposition();
+
+isUsage(Property this) :
+	getOtherEnd().hasKeyword("context") || hasKeyword("usage");
+
+isTransient(Property this) :
+	association.hasKeyword("transient");
+
+getReferenceKind(Property this) :
+	if isQualified() then
+		(if isMultivalued() then
+			"QUALIFIED_TO_MANY"
+		else
+			"QUALIFIED_TO_ONE")
+	else
+		(if isMultivalued() then
+			"TO_MANY"
+		else
+			"TO_ONE");
+
+getContainer(Property this, boolean isProp) :
+	if isQualified() then
+		"F" + (if isProp then "Prop" else "") + (if isMultivalued() then "Duplicated" else "") + "HashMap"
+	else
+		(if isMultivalued() then
+			"F" + (if isProp then "Prop" else "") + 
+			(if isSorted() then
+				"TreeSet"
+			else
+				(if isOrdered then
+					"LinkedList"
+				else
+					"HashSet"))
+		else
+			type.name);
+
+access(Property this, Property partner, boolean add) :
+	(if isMultivalued() || isQualified() then
+		(if add then
+			"addTo"
+		else
+			"removeFrom")
+	else
+		"set")
+	+ name.toFirstUpper() + "(" +
+	(if add then
+		(if partner.isQualified() && ! partner.isInternalQualified() then "key, " else "") +
+		(if hasKey() then "partnerKey, " else "") +
+		"this)"
+	else
+		if isMultivalued() || isQualified() then
+			"this)"
+		else
+			(if partner.isQualified() && ! partner.isInternalQualified() then "" + partner.getQualifier().type.getDefaultAsString() + ", " else "") +
+			"null)");
+
+qualifiedVisibilityString(Property this, Classifier parent) :
+	if isInternalQualified() && visibility == VisibilityKind::public then
+		"protected"
+	else
+		childVisibilityString(parent);
+
+String getComparator(Property this) :
+	null;
+
+getContainerParam(Property this, boolean prop) :
+	(if isSorted() && getComparator() != null then
+		getComparator() + (if prop then ", " else " ")
+	else
+		"") +
+	(if prop then
+		"this, PROPERTY_" + name.camelToUpperCase()
+	else
+		"");
+
+getLinkedListString(Property this) :
+	if isOrdered() then
+		" && !this.hasIn" + methodSuffix() + " (value)"
+	else
+		"";
+
+//FIX ME: getOperations return any operation named "removeYou" regardless of the parameters
+canRemove(Classifier this) :
+	!isReference() || getOperation("removeYou", null, null) != null;

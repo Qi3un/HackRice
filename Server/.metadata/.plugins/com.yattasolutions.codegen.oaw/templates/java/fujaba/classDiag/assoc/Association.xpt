@@ -1,0 +1,1105 @@
+«IMPORT uml»
+«IMPORT UMLLabProfile»
+
+«IMPORT java::standard::classDiag::classifier»
+
+«EXTENSION java::fujaba::classDiag::assoc::AssociationExtensions»
+«EXTENSION java::fujaba::classDiag::classifier::ClassifierExtensions»
+
+«DEFINE role(Fujaba style, Classifier parent, MemberFragmentTuple fragment) FOR Property»
+«IF fragment.partId == 0»
+«REM»TODO: implement fragments for associations«ENDREM»
+«EXPAND roleImpl(style,getOtherEnd(),association,parent) FOR this»
+«ELSEIF fragment.partId == 1»
+«FILE "removeYouAppender" appender»
+«IF !Interface.isInstance(parent)»
+«EXPAND removeYou(style) FOR this»
+«ENDIF»
+«ENDFILE»
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE roleImpl(Fujaba style, Property partnerRole, Association assoc, Classifier parent) FOR Property»
+/**
+ * <pre>
+ *           «partnerRole.lower»..«partnerRole.getUpperString()»     «assoc.name»     «lower»..«getUpperString()»
+
+ * «partnerRole.type.name» ------------------------«IF isRef()»>«ELSE»-«ENDIF» «type.name»
+
+ *           «partnerRole.name»        «getDirection(assoc)»       «name»
+
+ * </pre>
+	«EXPAND java::standard::Comment::comment(" *"," *") FOR association»
+	«EXPAND java::standard::Comment::comment(" *"," *") FOR partnerRole»
+ */
+
+	«IF ((Classifier) partnerRole.type).isJavaBean() || isAnnotationsEnabled()»
+public static final String PROPERTY_«name.camelToUpperCase()» = "«name»";
+	«ENDIF»
+	«EXPAND File::import(type.style()) FOR type»
+	«IF  isQualified()»
+		«LET getQualifier().type AS tmp»
+		«EXPAND File::import(tmp.style()) FOR tmp»
+		«ENDLET»
+	«ENDIF»
+	«IF  isQualified()»
+		«EXPAND toMany(style, partnerRole, parent) FOR this»
+		«EXPAND qualified(style, partnerRole, parent) FOR this»
+		«IF isMultivalued()»
+		«EXPAND qualifiedToMany(style, partnerRole, parent) FOR this»
+		«ELSE»
+		«EXPAND qualifiedToOne(style, partnerRole, parent) FOR this»
+		«ENDIF»
+		«IF isInternalQualified()»
+		«EXPAND internalQualified(style, partnerRole, parent) FOR this»
+		«ENDIF»
+	«ELSE»
+		«IF isMultivalued()»
+			«EXPAND toMany(style, partnerRole, parent) FOR this»
+		«ELSE»
+			«EXPAND toOne(style, partnerRole, parent) FOR this»
+		«ENDIF»
+	«ENDIF»
+«ENDDEFINE»
+
+«DEFINE removeYou(Fujaba style) FOR Property»
+«IF isComposition() && canRemove((Classifier) type)»
+«IF isMultivalued() || isQualified()»
+   for (Iterator iter«methodSuffix()» = this.iteratorOf«methodSuffix()» (); iter«methodSuffix()».hasNext ();)
+   {
+      ((«type.name»)iter«methodSuffix()».next ()).removeYou ();
+   }
+«ELSE»
+   final «type.name» tmp«methodSuffix()» = this.get«methodSuffix()» ();
+   if (tmp«methodSuffix()» != null)
+   {
+      tmp«methodSuffix()».removeYou ();
+   }
+«ENDIF»
+«ELSE»
+«IF isMultivalued() || isQualified()»
+   this.removeAllFrom«methodSuffix()» ();
+«ELSE»
+   this.set«methodSuffix()» («IF getOtherEnd().isQualified() && !getOtherEnd().isInternalQualified()»
+«getOtherEnd().getQualifier().type.getDefaultAsString()», «ENDIF»
+null);
+«ENDIF»
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE toOne(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+	«EXPAND annotation(style,partnerRole,false) FOR this»
+	«IF !parent.isInterface()»
+private «IF isTransient()»transient «ENDIF»«getContainer(parent.isJavaBean())» «name»;
+
+		«EXPAND annotation(style,partnerRole,true) FOR this»
+	«ENDIF»
+	«IF !isReadOnly»
+«childVisibilityString(parent)» boolean set«methodSuffix()» («""-»
+«IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+«type.name» value)«""-»
+		«IF parent.isInterface()»
+;
+		«ELSE»
+
+{
+   boolean changed = false;
+
+   if (this.«name» != value)
+   {
+			«IF isRef()»
+      «type.name» oldValue = this.«name»;
+      «IF hasKeyword("fujaba")»«REM»Remove this«ENDREM»
+      «parent.typeString(this)» source = this;
+      «ENDIF»
+      this.«name» = value;
+			«IF parent.isJavaBean()»«REM»TODO stimmt das so?«ENDREM»
+      getPropertyChangeSupport().firePropertyChange(PROPERTY_«name.camelToUpperCase()», oldValue, value);
+			«ENDIF»
+      changed = true;
+			«ELSE»
+      «type.name» oldValue = this.«name»;
+      «IF hasKeyword("fujaba")»«REM»Remove this«ENDREM»
+      «parent.typeString(this)» source = this;
+      «ENDIF»
+      if (this.«name» != null)
+      {
+         this.«name» = null;
+         oldValue.«partnerRole.access(this,false)»;
+      }
+      this.«name» = value;
+
+      if (value != null)
+      {
+         value.«partnerRole.access(this,true)»;
+      }
+			«IF parent.isJavaBean()»«REM»TODO stimmt das so?«ENDREM»
+         getPropertyChangeSupport().firePropertyChange(PROPERTY_«name.camelToUpperCase()», oldValue, value);
+			«ENDIF»
+      changed = true;
+			«ENDIF»
+   }
+   return changed;
+}
+		«ENDIF»
+
+		«EXPAND annotation(style,partnerRole,true) FOR this»
+	«ENDIF»
+«childVisibilityString(parent)» «type.name» get«methodSuffix()» ()«""-»
+	«IF parent.isInterface()»
+;
+	«ELSE»
+
+{
+   return this.«name»;
+}
+	«ENDIF»
+«ENDDEFINE»
+
+«DEFINE toMany(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+	«EXPAND annotation(style,partnerRole,false) FOR this»
+	«IF !parent.isInterface()»
+private «IF isTransient()»transient «ENDIF»«getContainer(parent.isJavaBean())» «name»;
+
+		«EXPAND annotation(style,partnerRole,true) FOR this»
+	«ENDIF»
+	«addImport("java.util.*")»
+	«addImport("de.upb.tools.fca.*")»
+	«IF ! isQualified() || isInternalQualified()»
+«childVisibilityString(parent)» boolean addTo«methodSuffix()» («""-»
+«IF hasKey()»«getKey()» partnerKey, «ENDIF»
+«type.name» value)«""-»
+«IF parent.isInterface()»
+;
+		«ELSE»
+
+{
+			«IF isInternalQualified()»
+   return this.addTo«methodSuffix()» («IF hasKey()»partnerKey, «ENDIF»getKeyFor«methodSuffix()» (value), value);
+			«ELSE»
+   boolean changed = false;
+
+   if (value != null«getLinkedListString()»)
+   {
+      if (this.«name» == null)
+      {
+         this.«name» = new «getContainer(parent.isJavaBean())» («getContainerParam(parent.isJavaBean())»);
+
+      }
+      changed = this.«name».add (value);
+				«IF !isRef()»
+      if (changed)
+      {
+         value.«partnerRole.access(this,true)»;
+      }
+				«ENDIF»
+   }
+   return changed;
+			«ENDIF»
+}
+		«ENDIF»
+
+		«EXPAND annotation(style,partnerRole,true) FOR this»
+	«ENDIF»
+«childVisibilityString(parent)» boolean removeFrom«methodSuffix()» («type.name» value)«""-»
+	«IF parent.isInterface()»
+;
+	«ELSE»
+
+{
+		«IF isInternalQualified()»
+   return removeFrom«methodSuffix()» (getKeyFor«methodSuffix()» (value), value);
+		«ELSE»
+   boolean changed = false;
+
+			«IF isQualified()»
+   if (this.«name» != null)
+   {
+      Iterator iter = this.entriesOf«methodSuffix()» ();
+      Map.Entry entry;
+      while (iter.hasNext ())
+      {
+         entry = (Map.Entry) iter.next ();
+         if (entry.getValue () == value)
+         {
+            if (this.removeFrom«methodSuffix()» ((«getKeyWrapper()») entry.getKey (), value))
+            {
+               changed = true;
+            }
+         }
+      }
+   }
+			«ELSE»
+«REM»TODO hier value != null und oben nicht?«ENDREM»
+   if ((this.«name» != null) && (value != null))
+   {
+      changed = this.«name».remove (value);
+				«IF !isRef()»
+      if (changed)
+      {
+         value.«partnerRole.access(this,false)»;
+      }
+				«ENDIF»
+   }
+			«ENDIF»
+   return changed;
+		«ENDIF»
+}
+	«ENDIF»
+
+	«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» void removeAllFrom«methodSuffix()» ()«""-»
+«IF parent.isInterface()»
+;
+	«ELSE»
+
+{
+		«IF isRef()»
+   if (this.«name» != null && this.«name».size () > 0)
+   {
+      this.«name».clear();
+   }
+		«ELSE»
+			«IF isQualified()»
+   Iterator iter = entriesOf«methodSuffix()» ();
+   Map.Entry entry;
+   while (iter.hasNext ())
+   {
+      entry = (Map.Entry) iter.next ();
+      removeFrom«methodSuffix()» ((«getKeyWrapper()») entry.getKey (), («type.name») entry.getValue ());
+   }
+			«ELSE»
+   «type.name» tmpValue;
+   Iterator iter = this.iteratorOf«methodSuffix()» ();
+
+   while (iter.hasNext ())
+   {
+      tmpValue = («type.name») iter.next ();
+      this.removeFrom«methodSuffix()» (tmpValue);
+   }
+			«ENDIF»
+		«ENDIF»
+}
+	«ENDIF»
+
+	«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean hasIn«methodSuffix()» («type.name» value)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+«IF isInternalQualified()»
+   return (this.hasIn«methodSuffix()» (this.getKeyFor«methodSuffix()» (value), value));
+«ELSE»
+   return ((this.«name» != null) &&
+«IF isQualified()»
+           this.«name».containsValue (value));
+«ELSE»
+           (value != null) &&
+           this.«name».contains (value));
+«ENDIF»
+«ENDIF»
+}
+«ENDIF»
+
+	«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «IF isOrdered()»List«ENDIF»Iterator iteratorOf«methodSuffix()» ()«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+           ? FEmpty«IF isOrdered()»List«ENDIF»Iterator.get ()
+           : this.«name»
+«IF isQualified()».values ()«ENDIF»
+«IF isOrdered()»
+.listIterator());
+«ELSE»
+.iterator ());
+«ENDIF»
+
+}
+«ENDIF»
+
+	«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» int sizeOf«methodSuffix()» ()«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+           ? 0
+           : this.«name».size ());
+}
+«ENDIF»
+«IF isSorted()»
+«EXPAND sorted(style, partnerRole, parent) FOR this»
+«ENDIF»
+«IF isOrdered()»
+«EXPAND sorted(style, partnerRole, parent) FOR this»
+«EXPAND ordered(style, partnerRole, parent) FOR this»
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE qualified(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+
+«childVisibilityString(parent)» boolean hasKeyIn«methodSuffix()» («getKey()» key)«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   return ((this.«name» != null) &&
+           this.«name».containsKey (key));
+}
+«ENDIF»
+
+«childVisibilityString(parent)» Iterator keysOf«methodSuffix()» ()«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+           ? FEmptyIterator.get ()
+           : this.«name».keySet ().iterator ());
+}
+«ENDIF»
+
+«childVisibilityString(parent)» Iterator entriesOf«methodSuffix()» ()«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+           ? FEmptyIterator.get ()
+           : this.«name».entrySet ().iterator ());
+}
+«ENDIF»
+
+«IF !parent.isInterface() || !isInternalQualified()»
+«qualifiedVisibilityString(parent)» boolean hasIn«methodSuffix()» («getKey()» key, «type.name» value)«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   return ((this.«name» != null) &&
+«IF isMultivalued()»
+           this.«name».containsEntry (key, value));
+«ELSE»
+           (value != null || this.«name».containsKey (key)) && 
+           (this.«name».get (key) == value));
+«ENDIF»
+}
+«ENDIF»
+
+«qualifiedVisibilityString(parent)» boolean addTo«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+«getKey()» key, «type.name» value)«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+   if (this.«name» == null)
+   {
+      this.«name» = new «getContainer(parent.isJavaBean())» («getContainerParam(parent.isJavaBean())»);
+   }
+   «type.name» oldValue = («type.name») this.«name».put (key, value);
+   if (oldValue != value)
+   {
+«IF !isRef()»
+      if (oldValue != null)
+      {
+         oldValue.«partnerRole.access(this,false)»;
+      }
+      if (value != null)
+      {
+         value.«partnerRole.access(this,true)»;
+      }
+«ENDIF»
+      changed = true;
+   }
+   return changed;
+}
+«ENDIF»
+
+«qualifiedVisibilityString(parent)» boolean addTo«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+Map.Entry entry)«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   return addTo«methodSuffix()» («IF partnerRole.hasKey()»partnerKey, «ENDIF»
+(«getKeyWrapper()») entry.getKey (), («type.name») entry.getValue ());
+}
+«ENDIF»
+
+«qualifiedVisibilityString(parent)» boolean removeFrom«methodSuffix()» («getKey()» key, «type.name» value)«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+«IF isMultivalued()»
+   if ((this.«name» != null) &&
+       (value != null || this.«name».containsEntry (key, value)))
+   {
+      «type.name» oldValue  = («type.name») this.«name».remove (key, value);
+      if (oldValue == value)
+      {
+«IF !isRef()»
+        if (value != null)
+        {
+           value.«partnerRole.access(this,false)»;
+        }
+«ENDIF»
+        changed = true;
+      }
+   }
+«ELSE»
+   if (this.«name» != null)
+   {
+      «type.name» oldValue = («type.name») this.«name».get (key);
+      if (oldValue == value && 
+          (oldValue != null || this.«name».containsKey (key)))
+      {
+         this.«name».remove (key);
+«IF !isRef()»
+         if (value != null)
+         {
+            value.«partnerRole.access(this,false)»;
+         }
+«ENDIF»
+         changed = true;
+      }
+   }
+«ENDIF»
+   return changed;
+}
+«ENDIF»
+
+«childVisibilityString(parent)» boolean removeKeyFrom«methodSuffix()» («getKey()» key)«""-»
+«IF parent.isInterface()» 
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+«IF isMultivalued()»
+   if (this.«name» != null)
+   {
+      Collection tmpCol = (Collection) this.«name».values (key);
+      if (tmpCol != null)
+      {
+         «type.name» tmpValue;
+         Iterator iter = tmpCol.iterator ();
+         while (iter.hasNext ())
+         {
+            tmpValue = («type.name») iter.next ();
+            this.removeFrom«methodSuffix()» (key, tmpValue);
+         }
+         changed = true;
+      }
+   }
+«ELSE»
+   if (this.«name» != null)
+   {
+      changed = this.«name».containsKey (key);
+      if (changed)
+      {
+         «type.name» tmpValue = («type.name») this.«name».remove (key);
+«IF !isRef()»
+         if (tmpValue != null)
+         {
+            tmpValue.«partnerRole.access(this,false)»;
+         }
+«ENDIF»
+      }
+   }
+«ENDIF»
+   return changed;
+}
+«ENDIF»
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE qualifiedToOne(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getFrom«methodSuffix()» («getKey()» key)
+«IF parent.isInterface()»
+;
+«ELSE»{
+   return ((this.«name» == null)
+           ? null
+           : («type.name») this.«name».get (key));
+}
+«ENDIF»
+
+«ENDDEFINE»
+
+«DEFINE qualifiedToMany(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» Iterator iteratorOf«methodSuffix()» («getKey()» key)
+«IF parent.isInterface()»
+;
+«ELSE»
+{
+   return ((this.«name» == null)
+           ? FEmptyIterator.get ()
+           : FCollections.iterator (this.«name».values (key)));
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» int sizeOf«methodSuffix()» («getKey()» key)
+«IF parent.isInterface()»
+;
+«ELSE»
+{
+   return ((this.«name» == null)
+           ? 0
+           : this.«name».size (key));
+}
+«ENDIF»
+
+«ENDDEFINE»
+
+«DEFINE internalQualified(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «getKey()» getKeyFor«methodSuffix()» («type.name» value)
+«IF parent.isInterface()»
+;
+«ELSE»
+{
+   return (value == null ? null : value.get«getQualifier().name.toFirstUpper()» ());
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» void keyChangedIn«methodSuffix()» («getKey()» oldKey, «type.name» value)
+«IF parent.isInterface()»
+;
+«ELSE»
+{
+«IF isMultivalued()»
+   if ((this.«name» != null) && 
+       (oldKey != getKeyFor«methodSuffix()» (value)))
+   {
+      «type.name» oldValue  = («type.name») this.«name».remove (oldKey, value);
+      if (oldValue != null)
+      {
+         this.«name».put (getKeyFor«methodSuffix()» (value), value);
+      }
+   }
+«ELSE»
+   if ((this.«name» != null) &&  
+       (oldKey != getKeyFor«methodSuffix()» (value)))
+   {
+      «type.name» oldValue = («type.name») this.«name».get (oldKey);
+      if (oldValue == value)
+      {
+         this.«name».remove (oldKey);
+         oldValue = («type.name»)this.«name».put (this.getKeyFor«methodSuffix()» (value), value);
+«IF !isRef()»
+         if (oldValue != null)
+         {
+            oldValue.«partnerRole.access(this,false)»;
+         }
+«ENDIF»
+      }
+   }
+«ENDIF»
+}
+«ENDIF»
+
+«ENDDEFINE»
+
+«DEFINE sorted(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getFirstOf«methodSuffix()» ()«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return null;
+   }
+   else
+   {
+      if («name».size() == 0) 	 
+      { 	 
+         return null; 	 
+      }
+«IF isQualified()»
+      return («type.name») «name».get («name».firstKey ());
+«ELSE»
+      return («type.name») «name».getFirst ();
+«ENDIF»
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getLastOf«methodSuffix()» ()«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return null;
+   }
+   else
+   {
+      if («name».size() == 0) 	 
+      { 	 
+         return null; 	 
+      }
+«IF isQualified()»
+      return («type.name») «name».get («name».lastKey ());
+«ELSE»
+      return («type.name») «name».getLast ();
+«ENDIF»
+   }
+}
+«ENDIF»
+
+«ENDDEFINE»
+
+«DEFINE ordered(Fujaba style, Property partnerRole, Classifier parent) FOR Property»
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getFrom«methodSuffix()» ( int index )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if (index >= 0 && index < sizeOf«methodSuffix()» ())
+   {
+      return («type.name») this.«name».get (index);
+   }
+   else
+   {
+      throw new IllegalArgumentException ("get«methodSuffix()»At(" + index + ")" );
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» int indexOf«methodSuffix()» ( «type.name» value )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+           ? -1
+           : this.«name».indexOf (value));
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» int indexOf«methodSuffix()» ( «type.name» value, int index )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+	       ? -1
+	       : this.«name».indexOf (value, index));
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» int lastIndexOf«methodSuffix()» ( «type.name» value )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+            ? -1
+            : this.«name».lastIndexOf (value));
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» int lastIndexOf«methodSuffix()» ( «type.name» value, int index )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+            ? -1
+            : this.«name».lastIndexOf (value, index));
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean isBeforeOf«methodSuffix()» ( «type.name» leftObject, «type.name» rightObject)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return false;
+   }
+   else
+   {
+      return «name».isBefore (leftObject, rightObject);
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean isAfterOf«methodSuffix()» ( «type.name» leftObject, «type.name» rightObject)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return false;
+   }
+   else
+   {
+      return «name».isAfter (leftObject, rightObject);
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getNextOf«methodSuffix()» ( «type.name» object )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return null;
+   }
+   else
+   {
+      return («type.name») «name».getNextOf (object);
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getNextOf«methodSuffix()» ( «type.name» object, int index)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return null;
+   }
+   else
+   {
+      return («type.name») «name».getNextOf (object, index);
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getPreviousOf«methodSuffix()» ( «type.name» object)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return null;
+   }
+   else
+   {
+      return («type.name») «name».getPreviousOf (object);
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» «type.name» getPreviousOf«methodSuffix()» ( «type.name» object, int index )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   if («name» == null)
+   {
+      return null;
+   }
+   else
+   {
+      return («type.name») «name».getPreviousOf (object, index);
+   }
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean addAfterOf«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+ «type.name» refObject, «type.name» value)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   boolean changed = false;
+   if («name» != null)
+   {
+      int index = «name».indexOf (refObject);
+      changed = addTo«methodSuffix()» («IF partnerRole.hasKey()»partnerKey, «ENDIF»
+index+1, value);
+   }
+   return changed;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean addBeforeOf«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+ «type.name» refObject, «type.name» value)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   boolean changed = false;
+   if («name» != null)
+   {
+      int index = «name».indexOf (refObject);
+      changed = addTo«methodSuffix()» («IF partnerRole.hasKey()»partnerKey, «ENDIF»
+index, value);
+   }
+   return changed;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean addTo«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+int index, «type.name» value)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+   if (value != null)
+   {
+      if (this.«name» == null)
+      {
+         this.«name» = new «getContainer(parent.isJavaBean())» («getContainerParam(parent.isJavaBean())»); // or FTreeSet () or FLinkedList ()
+      }
+      int oldIndex = this.indexOf«methodSuffix()» (value);
+      if (oldIndex != index)
+      {
+         try
+         {
+            if (oldIndex > -1)
+            {
+               «name».remove (oldIndex);
+            }
+            «name».add (index, value);
+«IF !isRef()»
+            if (oldIndex < 0)
+            {
+               value.«partnerRole.access(this,true)»;
+            }
+«ENDIF»
+            changed = true;
+         }
+         catch (IndexOutOfBoundsException ex)
+         {
+            return false;
+         }
+      }
+   }
+   return changed;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean setIn«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+int index, «type.name» value)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+   if (value != null)
+   {
+      if (this.«name» == null)
+      {
+         this.«name» = new «getContainer(parent.isJavaBean())» («getContainerParam(parent.isJavaBean())»); // or FTreeSet () or FLinkedList ()
+      }
+      int oldIndex = this.indexOf«methodSuffix()» (value);
+      if (oldIndex != index)
+      {
+         try
+         {
+            «type.name» oldValue = («type.name»)this.«name».set (index, value);
+            if (oldIndex > -1)
+            {
+               this.«name».remove (oldIndex);
+            }
+            if (oldValue != value)
+            {
+«IF !isRef()»
+               if (oldValue != null)
+               {
+                  oldValue.«partnerRole.access(this,false)»;
+               }
+               if (oldIndex < 0)
+               {
+                  value.«partnerRole.access(this,true)»;
+               }
+«ENDIF»
+               changed = true;
+            }
+         }
+         catch (IndexOutOfBoundsException ex)
+         {
+            return false;
+         }
+      }
+   }
+   return changed;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean removeFrom«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+int index)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+   if (this.«name» != null && (index >= 0 && index < this.«name».size ()))
+   {
+      «type.name» tmpValue = («type.name») this.«name».remove (index);
+      if (tmpValue != null)
+      {
+«IF !isRef()»
+         tmpValue.«partnerRole.access(this,false)»;
+«ENDIF»
+         changed = true;
+      }
+   }
+   return changed;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» boolean removeFrom«methodSuffix()» («IF partnerRole.hasKey()»«partnerRole.getKey()» partnerKey, «ENDIF»
+int index, «type.name» value)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   boolean changed = false;
+
+   if ((this.«name» != null) && (value != null) && 
+       (index >= 0 && index < this.«name».size ()))
+   {
+      «type.name» oldValue = («type.name») this.«name».get (index);
+      if (oldValue == value)
+      {
+         changed = this.removeFrom«methodSuffix()» (index);
+      }
+   }
+   return changed;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» ListIterator iteratorOf«methodSuffix()» ( «type.name»  lowerBound )«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   ListIterator result = FEmptyListIterator.get ();
+
+   if («name» != null && lowerBound != null)
+   {
+      int index = «name».indexOf (lowerBound) + 1;
+      result = «name».listIterator (index);
+   }
+   else if («name» != null && lowerBound == null)
+   {
+      result = «name».listIterator (0);
+   }
+
+   return result;
+}
+«ENDIF»
+
+«EXPAND annotation(style,partnerRole,true) FOR this»
+«childVisibilityString(parent)» ListIterator iteratorOf«methodSuffix()» (int index)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+
+{
+   return ((this.«name» == null)
+           ? FEmptyListIterator.get ()
+           : this.«name».listIterator (Math.max(0,Math.min(index,this.«name».size ()))));
+}
+«ENDIF»
+
+«ENDDEFINE»
+
+«DEFINE annotation(Fujaba style, Property partnerRole, boolean short) FOR Property»
+	«IF isAnnotationsEnabled()»
+@«IF getBooleanAlias(false)»de.uni_kassel.features.annotation.util.«ENDIF»Property( name = PROPERTY_«name.camelToUpperCase()»
+		«IF !short»
+			«addImport("de.uni_kassel.features.annotation.util.Property")»
+			«addImport("de.uni_kassel.features.ReferenceHandler")»
+, «""-»
+			«IF !isRef()»partner = «type.name».PROPERTY_«partnerRole.name.camelToUpperCase()», «ENDIF»
+kind = ReferenceHandler.ReferenceKind.«getReferenceKind()»,
+      	«""-»
+			«IF isAggregation()»
+adornment = ReferenceHandler.Adornment.AGGREGATION«""-»
+			«ELSEIF isComposition()»
+adornment = ReferenceHandler.Adornment.COMPOSITION«""-»
+			«ELSEIF isParent()»
+adornment = ReferenceHandler.Adornment.PARENT«""-»
+			«ELSEIF isUsage()»
+adornment = ReferenceHandler.Adornment.USAGE«""-»
+			«ELSE»
+adornment = ReferenceHandler.Adornment.NONE«""-»
+			«ENDIF»
+		«ENDIF»
+)
+	«ENDIF»
+«ENDDEFINE»

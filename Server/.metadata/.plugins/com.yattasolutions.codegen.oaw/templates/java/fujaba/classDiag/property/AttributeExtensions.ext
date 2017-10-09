@@ -1,0 +1,4 @@
+import uml;
+
+extension Utility reexport;
+extension java::standard::classDiag::property::AttributeExtensions reexport;

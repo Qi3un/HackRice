@@ -1,0 +1,76 @@
+«IMPORT uml»
+«IMPORT UMLLabProfile»
+
+«IMPORT java::standard»
+«IMPORT java::standard::classDiag::classifier»
+«IMPORT java::standard::classDiag::property»
+«IMPORT java::standard::classDiag::operation»
+«IMPORT java::fujaba::classDiag::assoc»
+
+«EXTENSION java::fujaba::classDiag::classifier::ClassifierExtensions»
+
+«DEFINE classifier(Fujaba style) FOR Classifier»
+«EXPAND java::standard::Comment::comment FOR this»
+«visibilityString()» «IF isAbstract && !isInterface()»abstract «ENDIF»«IF isStatic()»static «ENDIF»
+«IF isFinal()»final «ENDIF»«IF isStrictFP() && !isInterface()»strictfp «ENDIF»
+«getClassOrInterfaceString()» «EXPAND Type::type(this) FOR this»
+«LET getGeneralization() AS generalization»
+«IF generalization != null && !isInterface()» extends «EXPAND Type::type(generalization) FOR generalization.general»
+«EXPAND File::import(generalization.general.style()) FOR generalization.general»
+«ENDIF»
+«ENDLET»
+«IF declareJavaBean()»
+«addImport("de.upb.tools.pcs.PropertyChangeClient")»
+ «extendsClause()» PropertyChangeClient«""-»
+«IF !getInterfaces().isEmpty», «ENDIF»
+«ELSE»
+«IF !getInterfaces().isEmpty» «extendsClause()» «ENDIF»
+«ENDIF»
+«FOREACH getInterfaces() AS relationship SEPARATOR ", "»
+«IF relationship.target.size > 0»
+«LET (Classifier) relationship.target.fromSingleton() AS super»
+«EXPAND File::import(super.style()) FOR super» «EXPAND Type::type(relationship) FOR super»
+«ENDLET»
+«ENDIF»
+«ENDFOREACH»
+{
+«EXPAND File::classifierChildren(style) FOR this»
+
+}
+«ENDDEFINE»
+
+
+«DEFINE additionalMember(Fujaba style, Classifier parent, MemberFragmentTuple fragment) FOR Classifier»
+«IF fragment.partId == 0»
+«EXPAND removeYouMethod FOR this»
+«ELSEIF fragment.partId == 1»
+«IF implementJavaBean()»
+«EXPAND Bean::bean(style) FOR this»
+«ENDIF»
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE removeYouMethod FOR Classifier»
+«LET getMembers().select(e|Property.isInstance(e) && Fujaba.isAssignableFrom(e.style().metaType) && ((Property) e).association != null) AS removeYou»
+«IF !removeYou.isEmpty || getGeneralization() == null || getSuperClass().isReference()»
+
+public void removeYou()«""-»
+«IF isInterface()»
+;
+«ELSE»
+
+{
+«FILE "removeYouBody" defer»
+«getGlobalVar("removeYouAppender").indentWithRanges("   ")»
+«removeGlobalVar("removeYouAppender")->""»
+«ENDFILE»
+«REM»«ENDREM»
+«REM»FIX ME: getOperations return any operation named "removeYou" regardless of the parameters«ENDREM»
+«IF getSuperClass() != null && (!getSuperClass().isReference() || getSuperClass().getOperation("removeYou",null,null) != null)»
+   super.removeYou();
+«ENDIF»
+}
+«ENDIF»
+«ENDIF»
+«ENDLET»
+«ENDDEFINE»

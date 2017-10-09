@@ -1,0 +1,103 @@
+«EXTENSION Utility»
+«IMPORT uml»
+«IMPORT UMLLabProfile»
+
+«IMPORT java::standard»
+«IMPORT java::standard::classDiag::classifier»
+
+«EXTENSION java::fujaba::classDiag::property::AttributeExtensions»
+«EXTENSION java::fujaba::classDiag::classifier::ClassifierExtensions»
+
+«DEFINE attribute(Fujaba style, Classifier parent, MemberFragmentTuple fragment) FOR Property»
+«IF fragment.partId == 0»
+«EXPAND attributeProperty(style, parent) FOR this»
+«ELSEIF fragment.partId == 1»
+«EXPAND attributeDeclaration(style, parent) FOR this»
+«ELSEIF fragment.partId == 2»
+«EXPAND attributeSetter(style, parent) FOR this»
+«ELSEIF fragment.partId == 3»
+«EXPAND attributeGetter(style, parent) FOR this»
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE attributeProperty(Fujaba style, Classifier parent) FOR Property»
+«IF !Interface.isInstance(parent) && (parent.isJavaBean() || isAnnotationsEnabled())»
+public static final String PROPERTY_«name.camelToUpperCase()» = "«name»";
+
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE attributeDeclaration(Fujaba style, Classifier parent) FOR Property»
+«IF !isInterface(parent) || isConstant()»
+«EXPAND annotation FOR this»
+«attrVis(parent)» «IF isStatic»static «ENDIF»«IF isFinal()»final «ENDIF»«IF isTransient()»transient «ENDIF-»
+«EXPAND java::standard::Multiplicity::typedMultiplicityElement FOR this»
+ «name»«IF ^default != null» = «^default»«ENDIF»;
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE attributeSetter(Fujaba style, Classifier parent) FOR Property»
+«IF !isReadOnly»
+
+«REM»no setter for final attributes«ENDREM»
+«LET getWordAlias("value") AS value»
+«childVisibilityString(parent)» «IF isStatic»static «ENDIF»void set«name.methodSuffix()»(«EXPAND java::standard::Multiplicity::typedMultiplicityElement FOR this» «value»)«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+ {
+«IF parent.isJavaBean()»
+«IF type != null && type.isPrimitiveType("String")»
+«addImport("de.upb.tools.sdm.*")»
+   if ( JavaSDM.stringCompare («thisName(parent)», «value») != 0 )
+«ELSE»
+   if ( «thisName(parent)» != «value» )
+«ENDIF»
+   {
+«"   "»«EXPAND java::standard::Multiplicity::typedMultiplicityElement FOR this» oldValue = «thisName(parent)»;
+«ENDIF»
+   «"   "+thisName(parent)» = «value»;
+«IF parent.isJavaBean()»
+«IF !isStatic»
+      getPropertyChangeSupport().firePropertyChange(PROPERTY_«name.camelToUpperCase()», oldValue, «value»);
+«ENDIF»
+   }
+«ENDIF»
+}
+«ENDIF»
+«ENDLET» 
+«ENDIF»
+«ENDDEFINE»
+
+«DEFINE attributeGetter(Fujaba style, Classifier parent) FOR Property»
+«IF (! isConstant() || isConstantWithGetter())»
+
+«childVisibilityString(parent)» «IF isStatic»static «ENDIF»«EXPAND java::standard::Multiplicity::typedMultiplicityElement FOR this» «IF type!=null && type.isPrimitiveType("boolean") && upper==-1 && !isQualified()»is«ELSE»get«ENDIF»«name.methodSuffix()»()«""-»
+«IF parent.isInterface()»
+;
+«ELSE»
+ {
+   return «thisName(parent)»;
+}
+«ENDIF»
+«ENDIF»
+«ENDDEFINE»
+
+«REM»TODO does not work for forward«ENDREM»
+«DEFINE annotation FOR Property»
+«IF isAnnotationsEnabled()»
+«removeGlobalVar("fullAnnotation")->""»
+«LET getBooleanAlias(false) AS fullQualified»
+«IF getGlobalVar("fullAnnotation") == true»
+@«IF fullQualified»de.uni_kassel.features.annotation.util.«ENDIF»Property( name = PROPERTY_«name.camelToUpperCase()» )
+«ELSE»
+«storeGlobalVar("fullAnnotation",true)->""»
+«IF !fullQualified»
+«addImport("de.uni_kassel.features.annotation.util.Property")»
+«ENDIF»
+«addImport("de.uni_kassel.features.ReferenceHandler")»
+@«IF fullQualified»de.uni_kassel.features.annotation.util.«ENDIF»Property( name = PROPERTY_«name.camelToUpperCase()», kind = ReferenceHandler.ReferenceKind.ATTRIBUTE )
+«ENDIF»
+«ENDLET»
+«ENDIF»
+«ENDDEFINE»

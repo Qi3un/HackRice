@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="edu.rice.mapper.TodoItemMapper">
+	<resultMap id="todoItemResult" type="TodoItem">
+		<result column="name" property="name"/>
+		<result column="date" property="date"/>
+		<result column="beginTime" property="beginTime"/>
+		<result column="endTime" property="endTime"/>
+		<result column="description" property="description"/>
+		<association property="todoCategory" column="todoCategory" javaType="TodoCategory" resultMap="todoCategoryResult"/>
+	</resultMap>
+
+	<resultMap id="todoCategoryResult" type="TodoCategory">
+		<result column="category" property="category"/>
+		<result column="color" property="color"/>
+		<result column="priority" property="priority"/>
+		<result column="notifyMethod" property="notifyMethod"/>
+	</resultMap>
+	
+	<select id="getTodoItem" resultMap="todoItemResult">
+		select * from todoitems join todocategories on todoitems.todoCategory = todocategories.category where name = #{name} and email = #{email};
+	</select>
+	
+	<select id="allTodoItems" resultMap="todoItemResult">
+		select * from todoitems join todocategories on todoitems.todoCategory = todocategories.category where email = #{email};
+	</select>
+	
+	<select id="itemsInDateRange" resultMap="todoItemResult">
+		select * from todoitems join todocategories on todoitems.todoCategory = todocategories.category where Year(date) = #{year} and Month(date) = #{month} and email = #{email};
+	</select>
+	
+	<select id="searchTodoItemsByMonth" resultMap="todoItemResult">
+		select * from todoitems join todocategories on todoitems.todoCategory = todocategories.category where Year(date) = #{year} and Month(date) = #{month} and email = #{email};
+	</select>
+	
+	<select id="getTodoItemsByCategory" resultMap="todoItemResult">
+		select * from todoitems join todocategories on todoitems.todoCategory = todocategories.category where category = #{category} and email = #{email};
+	</select>
+	
+	<select id="getTodoItemsByPriority" resultMap="todoItemResult">
+		select * from todoitems join todocategories on todoitems.todoCategory = todocategories.category where priority = #{priority} and email = #{email};
+	</select>
+	
+	<insert id="addTodoItem">
+		insert into todoitems values(#{name}, #{date}, #{beginTime}, #{endTime}, #{category}, #{email}, #{description});
+	</insert>
+	
+	<update id="updateTodoItem">
+		update todoitems set todoCategory = #{category}, date = #{date}, beginTime = #{beginTime}, endTime = #{endTime}, description = #{description} where name = #{name} and email = #{email};
+	</update>
+
+	<delete id="deleteTodoItem">
+		delete from todoitems where name = #{name} and email = #{email};
+	</delete>
+	
+</mapper>

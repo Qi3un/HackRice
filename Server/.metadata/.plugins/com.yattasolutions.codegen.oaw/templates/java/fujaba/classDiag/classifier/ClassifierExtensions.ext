@@ -1,0 +1,25 @@
+import uml;
+
+extension Utility reexport;
+extension java::standard::classDiag::classifier::ClassifierExtensions reexport;
+
+private isJavaBeanAndSuperClassIsNot(Classifier this) :
+	isJavaBean() && (getSuperClass() == null || !getSuperClass().isJavaBean());
+
+implementJavaBean(Classifier this) :
+	isJavaBeanAndSuperClassIsNot() && !isInterface();
+
+declareJavaBean(Classifier this) :
+	if !isJavaBeanAndSuperClassIsNot() then
+		false
+	else
+		if getInterfaces().isEmpty then 
+			true
+		else 
+			getInterfaces().select(e|e.hasKeyword("JavaBean")).isEmpty;
+
+isJavaBean(Classifier this) :
+	hasKeyword("JavaBean");
+
+isAnnotationsEnabled(Property prop) :
+	prop.owner.hasKeyword("annotationsEnabled");

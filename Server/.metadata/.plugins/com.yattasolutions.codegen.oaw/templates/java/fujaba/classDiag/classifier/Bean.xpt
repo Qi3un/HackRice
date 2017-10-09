@@ -1,0 +1,39 @@
+«IMPORT uml»
+«IMPORT UMLLabProfile»
+«IMPORT java::standard::classDiag::property»
+«IMPORT java::standard::classDiag::operation»
+«IMPORT java::standard::classDiag::assoc»
+
+«EXTENSION Utility»
+
+«DEFINE bean(StyledElement style) FOR Classifier»
+«  addImport("java.beans.PropertyChangeSupport")»
+«  addImport("java.beans.PropertyChangeListener")»
+   protected final PropertyChangeSupport listeners = new PropertyChangeSupport(this);
+
+   public void addPropertyChangeListener(PropertyChangeListener listener)
+   {
+      getPropertyChangeSupport().addPropertyChangeListener(listener);
+   }
+
+   public void removePropertyChangeListener(PropertyChangeListener listener)
+   {
+      getPropertyChangeSupport().removePropertyChangeListener(listener);
+   }
+
+   public void addPropertyChangeListener(String property, PropertyChangeListener listener)
+   {
+      getPropertyChangeSupport().addPropertyChangeListener(property, listener);
+   }
+
+   public void removePropertyChangeListener(String property, PropertyChangeListener listener)
+   {
+      getPropertyChangeSupport().removePropertyChangeListener(property, listener);
+   }
+
+   public PropertyChangeSupport getPropertyChangeSupport()
+   {
+      return listeners;
+   }
+
+«ENDDEFINE»

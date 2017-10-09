@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AbsoluteLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="riceapp.hackrice.riceapp.EditTodoActivity"
+    tools:showIn="@layout/activity_edit_todo">
+
+
+    <EditText
+        android:id="@+id/todo_name_text"
+        android:layout_width="296dp"
+        android:layout_height="48dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="Todo Name"
+        android:layout_x="44dp"
+        android:layout_y="44dp" />
+
+    <Spinner
+        android:id="@+id/spinner"
+        android:layout_width="191dp"
+        android:layout_height="39dp"
+        android:layout_x="149dp"
+        android:layout_y="119dp" />
+
+    <EditText
+        android:id="@+id/todo_time_text"
+        android:layout_width="136dp"
+        android:layout_height="39dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="10:00-16:00"
+        android:layout_x="142dp"
+        android:layout_y="342dp" />
+
+    <EditText
+        android:id="@+id/todo_date_text"
+        android:layout_width="171dp"
+        android:layout_height="45dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="2017/10/10"
+        android:layout_x="103dp"
+        android:layout_y="270dp" />
+
+    <EditText
+        android:id="@+id/todo_descriptioin_text"
+        android:layout_width="296dp"
+        android:layout_height="46dp"
+        android:ems="10"
+        android:inputType="textPersonName"
+        android:text="Description"
+        android:layout_x="42dp"
+        android:layout_y="183dp" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_calendar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        app:fabSize="mini"
+        app:srcCompat="@android:drawable/ic_menu_my_calendar"
+        android:layout_x="300dp"
+        android:layout_y="270dp" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="56dp"
+        android:layout_height="34dp"
+        android:text="Date: "
+        android:textSize="20sp"
+        android:layout_x="44dp"
+        android:layout_y="276dp" />
+
+    <TextView
+        android:id="@+id/textView4"
+        android:layout_width="96dp"
+        android:layout_height="35dp"
+        android:text="TextView: "
+        android:textSize="20sp"
+        android:layout_x="44dp"
+        android:layout_y="347dp" />
+
+    <TextView
+        android:id="@+id/textView6"
+        android:layout_width="99dp"
+        android:layout_height="36dp"
+        android:text="Category"
+        android:textSize="20sp"
+        android:layout_x="42dp"
+        android:layout_y="119dp" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_x="301dp"
+        android:layout_y="342dp"
+        android:clickable="true"
+        app:fabSize="mini"
+        app:srcCompat="@android:drawable/ic_lock_idle_alarm" />
+
+</AbsoluteLayout>
